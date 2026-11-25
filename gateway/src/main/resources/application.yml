@@ -1,0 +1,29 @@
+server:
+  port: ${GATEWAY_PORT:8080}
+
+spring:
+  application:
+    name: tutoria-gateway
+  rabbitmq:
+    host: ${RABBITMQ_HOST:localhost}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:tutoria}
+    password: ${RABBITMQ_PASS:tutoria123}
+
+app:
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  jwt:
+    secret: ${JWT_SECRET:chave-secreta-super-segura-para-o-trabalho-de-tutoria-com-ia-2026}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  rabbitmq:
+    perguntas-exchange: perguntas.exchange
+    perguntas-queue: perguntas.queue
+    perguntas-routing-key: perguntas.routing.key
+    respostas-exchange: respostas.exchange
+    respostas-queue: respostas.queue
+    respostas-routing-key: respostas.routing.key
+
+logging:
+  level:
+    com.tutoria: INFO
