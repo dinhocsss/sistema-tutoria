@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { useTheme } from '../hooks/useTheme';
 import { login, register } from '../services/api';
 import type { AuthSession } from '../types';
 
@@ -7,6 +8,7 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ onAuthenticated }: AuthFormProps) {
+  const { theme, toggleTheme } = useTheme();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('aluno1');
   const [password, setPassword] = useState('123456');
@@ -34,7 +36,18 @@ export function AuthForm({ onAuthenticated }: AuthFormProps) {
     <div className="auth-container">
       <div className="auth-card">
         <div className="auth-header">
-          <span className="pill">Spring Boot + RabbitMQ + Spring AI + SSE</span>
+          <div className="auth-top-row">
+            <span className="pill">Spring Boot + RabbitMQ + Spring AI + SSE</span>
+            <button
+              type="button"
+              className="btn-icon"
+              onClick={toggleTheme}
+              title={theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'}
+              aria-label="Alternar tema"
+            >
+              {theme === 'dark' ? '☀️' : '🌙'}
+            </button>
+          </div>
           <h1>Tutoria Assíncrona com IA</h1>
           <p>
             Faça login para abrir seu stream SSE autenticado com JWT e enviar perguntas

@@ -1,4 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { useTheme } from '../hooks/useTheme';
 import { conectarStreamRespostas, enviarPergunta } from '../services/api';
 import type { AuthSession, ChatItem } from '../types';
 
@@ -7,14 +10,40 @@ interface TutorChatProps {
   onLogout: () => void;
 }
 
+function CodeBlock({ children }: { children?: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+  const preRef = useRef<HTMLPreElement | null>(null);
+
+  function handleCopy() {
+    const text = preRef.current?.innerText ?? '';
+    if (!text) return;
+    void navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    });
+  }
+
+  return (
+    <div className="code-block-wrapper">
+      <button type="button" className="copy-code-btn" onClick={handleCopy}>
+        {copied ? 'Copiado!' : 'Copiar'}
+      </button>
+      <pre ref={preRef}>{children}</pre>
+    </div>
+  );
+}
+
 export function TutorChat({ session, onLogout }: TutorChatProps) {
+  const { theme, toggleTheme } = useTheme();
   const [items, setItems] = useState<ChatItem[]>([]);
   const [texto, setTexto] = useState('');
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState<string | null>(null);
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const [sseStatus, setSseStatus] = useState<'conectando' | 'conectado' | 'reconectando' | 'erro'>(
     'conectando'
   );
+  const messagesRef = useRef<HTMLElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -62,6 +91,17 @@ export function TutorChat({ session, onLogout }: TutorChatProps) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [items]);
+
+  function handleScroll() {
+    const el = messagesRef.current;
+    if (!el) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setShowScrollBtn(distanceFromBottom > 120);
+  }
+
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }
 
   async function handleSend(e: FormEvent) {
     e.preventDefault();
@@ -111,13 +151,22 @@ export function TutorChat({ session, onLogout }: TutorChatProps) {
             <span className="dot" />
             {statusLabels[sseStatus]}
           </span>
+          <button
+            type="button"
+            className="btn-icon"
+            onClick={toggleTheme}
+            title={theme === 'dark' ? 'Alternar para tema claro' : 'Alternar para tema escuro'}
+            aria-label="Alternar tema"
+          >
+            {theme === 'dark' ? '☀️' : '🌙'}
+          </button>
           <button type="button" className="btn-secondary" onClick={onLogout}>
             Sair
           </button>
         </div>
       </header>
 
-      <main className="chat-messages">
+      <main className="chat-messages" ref={messagesRef} onScroll={handleScroll}>
         {items.length === 0 ? (
           <div className="empty-state">
             <h2>Envie sua primeira dúvida de Computação</h2>
@@ -175,7 +224,16 @@ export function TutorChat({ session, onLogout }: TutorChatProps) {
                     </span>
                   </div>
                 ) : (
-                  <div className="answer-text">{item.resposta}</div>
+                  <div className="answer-text markdown-body">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        pre: ({ children }) => <CodeBlock>{children}</CodeBlock>,
+                      }}
+                    >
+                      {item.resposta ?? ''}
+                    </ReactMarkdown>
+                  </div>
                 )}
               </div>
             </article>
@@ -183,6 +241,18 @@ export function TutorChat({ session, onLogout }: TutorChatProps) {
         )}
         <div ref={bottomRef} />
       </main>
+
+      {showScrollBtn && (
+        <button
+          type="button"
+          className="scroll-bottom-btn"
+          onClick={scrollToBottom}
+          title="Ir para a última resposta"
+          aria-label="Ir para a última resposta"
+        >
+          ↓
+        </button>
+      )}
 
       <footer className="chat-footer">
         {sendError && <div className="alert-error">{sendError}</div>}
