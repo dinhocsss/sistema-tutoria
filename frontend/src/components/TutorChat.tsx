@@ -2,8 +2,8 @@ import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'rea
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useTheme } from '../hooks/useTheme';
-import { conectarStreamRespostas, enviarPergunta } from '../services/api';
-import type { AuthSession, ChatItem } from '../types';
+import { useTutorChat, type SseStatus } from '../hooks/useTutorChat';
+import type { AuthSession } from '../types';
 
 interface TutorChatProps {
   session: AuthSession;
@@ -35,58 +35,14 @@ function CodeBlock({ children }: { children?: ReactNode }) {
 
 export function TutorChat({ session, onLogout }: TutorChatProps) {
   const { theme, toggleTheme } = useTheme();
-  const [items, setItems] = useState<ChatItem[]>([]);
-  const [texto, setTexto] = useState('');
-  const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
-  const [showScrollBtn, setShowScrollBtn] = useState(false);
-  const [sseStatus, setSseStatus] = useState<'conectando' | 'conectado' | 'reconectando' | 'erro'>(
-    'conectando'
+  const { items, sending, sendError, sseStatus, sendQuestion } = useTutorChat(
+    session.token,
+    onLogout
   );
+  const [texto, setTexto] = useState('');
+  const [showScrollBtn, setShowScrollBtn] = useState(false);
   const messagesRef = useRef<HTMLElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const controller = new AbortController();
-
-    conectarStreamRespostas(session.token, controller.signal, {
-      onConnected: () => setSseStatus('conectado'),
-      onStatusChange: (status) => setSseStatus(status),
-      onUnauthorized: () => onLogout(),
-      onResposta: (msg) => {
-        setItems((prev) => {
-          const exists = prev.some((item) => item.correlationId === msg.correlationId);
-          if (exists) {
-            return prev.map((item) =>
-              item.correlationId === msg.correlationId
-                ? {
-                    ...item,
-                    resposta: msg.resposta,
-                    status: msg.status,
-                    answeredAt: msg.timestamp,
-                  }
-                : item
-            );
-          }
-          return [
-            ...prev,
-            {
-              correlationId: msg.correlationId,
-              pergunta: msg.pergunta,
-              resposta: msg.resposta,
-              status: msg.status,
-              createdAt: msg.timestamp,
-              answeredAt: msg.timestamp,
-            },
-          ];
-        });
-      },
-    });
-
-    return () => {
-      controller.abort();
-    };
-  }, [session.token, onLogout]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -105,31 +61,13 @@ export function TutorChat({ session, onLogout }: TutorChatProps) {
 
   async function handleSend(e: FormEvent) {
     e.preventDefault();
-    const trimmed = texto.trim();
-    if (!trimmed) return;
-
-    setSending(true);
-    setSendError(null);
-    try {
-      const ack = await enviarPergunta(session.token, trimmed);
-      setItems((prev) => [
-        ...prev,
-        {
-          correlationId: ack.correlationId,
-          pergunta: trimmed,
-          status: 'PROCESSANDO',
-          createdAt: ack.timestamp,
-        },
-      ]);
+    const sent = await sendQuestion(texto);
+    if (sent) {
       setTexto('');
-    } catch (err) {
-      setSendError(err instanceof Error ? err.message : 'Erro ao enviar pergunta');
-    } finally {
-      setSending(false);
     }
   }
 
-  const statusLabels: Record<typeof sseStatus, string> = {
+  const statusLabels: Record<SseStatus, string> = {
     conectando: 'Conectando SSE...',
     conectado: 'SSE Conectado',
     reconectando: 'Reconectando SSE...',

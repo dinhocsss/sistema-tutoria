@@ -235,6 +235,7 @@ code {
   max-width: 920px;
   margin: 0 auto;
   height: 100vh;
+  height: 100dvh;
   overflow: hidden;
   position: relative;
   display: flex;
@@ -242,6 +243,7 @@ code {
 }
 
 .chat-header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -320,7 +322,9 @@ code {
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 1.5rem 1.25rem;
   display: flex;
   flex-direction: column;
@@ -365,6 +369,7 @@ code {
 }
 
 .qa-card {
+  flex-shrink: 0;
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
   border-radius: 14px;
@@ -594,6 +599,7 @@ code {
 }
 
 .chat-footer {
+  flex-shrink: 0;
   padding: 0.9rem 1.25rem 1.15rem;
   border-top: 1px solid var(--border-color);
   background: var(--bg-primary);
